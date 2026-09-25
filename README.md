@@ -152,6 +152,29 @@ Open `http://localhost:5173` in your browser.
 
 ---
 
+## ☁️ Deploying Backend to Render
+
+You can deploy the TaskLens backend to Render in a few clicks:
+
+### 1. Render Web Service Settings:
+- **Build & Deploy:** From Git repository
+- **Root Directory:** `backend`
+- **Runtime:** `Python 3`
+- **Build Command:** `pip install -r requirements.txt && python download_nltk.py`
+- **Start Command:** `uvicorn main:app --host 0.0.0.0 --port $PORT`
+- **Instance Type:** `Free`
+
+*(Alternatively, use the included [`render.yaml`](file:///c:/Users/Viraj/Projects/nlp/render.yaml) Blueprint).*
+
+### 2. Pointing Frontend to Render Backend:
+- In `frontend/`:
+  - Set `VITE_API_URL=https://your-service-name.onrender.com` in your production hosting platform (e.g. Vercel, Netlify, or `.env.local` for local development).
+- Test backend health: `https://your-service-name.onrender.com/api/health`
+
+> **Note on Render Free Tier:** Render free instances sleep after 15 minutes of inactivity. When accessed after sleep, the initial request takes ~30–45 seconds to spin up. TaskLens frontend includes connection status alerts and automatic wake-up polling.
+
+---
+
 ## 📡 API Specification
 
 | Method | Endpoint | Description | Request Body |

@@ -9,6 +9,31 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 
+import nltk
+
+# Ensure all required NLTK datasets are downloaded in production / fresh containers
+def _ensure_nltk_data():
+    required_packages = [
+        "punkt",
+        "punkt_tab",
+        "averaged_perceptron_tagger",
+        "averaged_perceptron_tagger_eng",
+        "wordnet",
+        "omw-1.4",
+        "stopwords",
+        "tagsets",
+    ]
+    for pkg in required_packages:
+        try:
+            nltk.data.find(pkg)
+        except LookupError:
+            try:
+                nltk.download(pkg, quiet=True)
+            except Exception:
+                pass
+
+_ensure_nltk_data()
+
 from services import task_extractor, word_meaning, statistics
 from services.predictor import ngram_model
 
@@ -20,10 +45,11 @@ app = FastAPI(
     version="1.0.0",
 )
 
+# Robust CORS configuration for local development and deployed frontends (Render, Vercel, Netlify)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
-    allow_credentials=True,
+    allow_credentials=False,
     allow_methods=["*"],
     allow_headers=["*"],
 )
@@ -92,6 +118,17 @@ def statistics_endpoint(body: TextInput):
         return statistics.compute(body.text)
     except Exception as e:
         return {"error": str(e)}
+
+
+@app.get("/")
+def root():
+    return {
+        "app": "TaskLens API",
+        "status": "online",
+        "docs": "/docs",
+        "health": "/api/health",
+        "description": "Productivity web app powered by classical NLP (NLTK + WordNet)",
+    }
 
 
 @app.get("/api/health")

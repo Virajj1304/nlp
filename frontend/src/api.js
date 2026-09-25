@@ -3,7 +3,10 @@
  * Connects React frontend directly to FastAPI backend
  */
 
-const API_BASE = "http://localhost:8000";
+// Use environment variable in production (e.g., Render URL) or fallback to local backend
+export const API_BASE = (
+  import.meta.env.VITE_API_URL || "http://localhost:8000"
+).replace(/\/+$/, "");
 
 async function request(endpoint, body = null, method = "POST") {
   const options = {
@@ -15,7 +18,14 @@ async function request(endpoint, body = null, method = "POST") {
     options.body = JSON.stringify(body);
   }
 
-  const res = await fetch(`${API_BASE}${endpoint}`, options);
+  let res;
+  try {
+    res = await fetch(`${API_BASE}${endpoint}`, options);
+  } catch (err) {
+    throw new Error(
+      `Network error connecting to backend (${API_BASE}). If on Render free tier, it may be waking up from sleep (~30-45s).`
+    );
+  }
 
   if (!res.ok) {
     const text = await res.text();

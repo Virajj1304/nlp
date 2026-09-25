@@ -3,7 +3,7 @@ import TaskExtractor from "./tools/TaskExtractor";
 import WordMeaning from "./tools/WordMeaning";
 import SmartCompletion from "./tools/SmartCompletion";
 import TextInsights from "./tools/TextInsights";
-import { api } from "./api";
+import { api, API_BASE } from "./api";
 
 const NAV_ITEMS = [
   { id: "task-extractor", label: "Task Extractor", shortcut: "1" },
@@ -72,10 +72,21 @@ export default function App() {
         </div>
 
         <div className="header-right">
-          <div className="status-indicator" title={backendOnline ? "FastAPI Backend Online" : "Connecting to backend..."}>
+          <div
+            className="status-indicator"
+            title={
+              backendOnline
+                ? `Connected to ${API_BASE}`
+                : `Connecting to ${API_BASE}... (Note: Render free tier cold start may take 30-45s on first visit)`
+            }
+          >
             <span className={`status-dot ${backendOnline ? "online" : backendOnline === false ? "offline" : "checking"}`} />
             <span className="status-text">
-              {backendOnline ? "FastAPI Connected" : backendOnline === false ? "Backend Offline" : "Connecting..."}
+              {backendOnline
+                ? "FastAPI Connected"
+                : backendOnline === false
+                ? "Backend Offline"
+                : "Connecting..."}
             </span>
           </div>
           <span className="tech-badge">NLTK + WordNet</span>

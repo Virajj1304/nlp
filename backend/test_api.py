@@ -1,52 +1,83 @@
-"""Quick test of all API endpoints."""
-import json
-import urllib.request
+"""
+TaskLens — Backend Test Suite
+===============================
+Directly tests all FastAPI endpoint handlers and services:
+  1. Health check
+  2. Task Extractor (/api/extract-tasks)
+  3. Word Meaning Disambiguation (/api/word-meaning)
+  4. Next-Word Prediction (/api/predict)
+  5. Text Insights Statistics (/api/statistics)
+"""
 
-BASE = "http://localhost:8000"
+from main import (
+    health,
+    extract_tasks_endpoint,
+    word_meaning_endpoint,
+    predict_endpoint,
+    statistics_endpoint,
+    TextInput,
+    WordMeaningInput,
+    PredictInput,
+)
 
 
-def post(endpoint, data):
-    body = json.dumps(data).encode("utf-8")
-    req = urllib.request.Request(
-        f"{BASE}{endpoint}",
-        data=body,
-        headers={"Content-Type": "application/json"},
-        method="POST",
-    )
-    with urllib.request.urlopen(req) as res:
-        return json.loads(res.read())
+def test_health():
+    res = health()
+    assert res["status"] == "ok"
+    assert res["app"] == "TaskLens"
+    print("[PASS] Health endpoint OK")
 
 
-def main():
-    print("=== Health ===")
-    with urllib.request.urlopen(f"{BASE}/api/health") as r:
-        print(json.loads(r.read()))
+def test_task_extractor():
+    sample = "Rahul, finish the backend by Wednesday and check the documentation before Thursday."
+    res = extract_tasks_endpoint(TextInput(text=sample))
+    assert res["count"] == 2
+    tasks = res["tasks"]
+    assert tasks[0]["action"] == "Finish"
+    assert tasks[0]["assignee"] == "Rahul"
+    assert tasks[0]["deadline"] == "Wednesday"
+    assert tasks[1]["action"] == "Check"
+    assert tasks[1]["assignee"] == "Rahul"
+    assert tasks[1]["deadline"] == "Thursday"
+    print(f"[PASS] Task Extractor OK ({len(tasks)} tasks extracted: {[t['title'] for t in tasks]})")
 
-    print("\n=== Tokenize ===")
-    r = post("/api/tokenize", {"text": "Natural language processing is amazing."})
-    print(json.dumps(r, indent=2)[:500])
 
-    print("\n=== Word Meaning ===")
-    r = post("/api/word-meaning", {
-        "sentence": "I went to the bank to deposit money.",
-        "target_word": "bank",
-    })
-    print(json.dumps(r, indent=2)[:500])
+def test_word_meaning():
+    res = word_meaning_endpoint(WordMeaningInput(
+        sentence="I went to the bank to deposit money.",
+        target_word="bank"
+    ))
+    assert res["found"] is True
+    assert "financial" in res["definition"].lower() or "depository" in res["detected_sense"]
+    assert len(res["alternative_senses"]) > 0
+    print(f"[PASS] Word Meaning OK (Detected: {res['detected_sense']})")
 
-    print("\n=== Grammar ===")
-    r = post("/api/grammar", {"text": "The boys is playing football."})
-    print(json.dumps(r, indent=2)[:500])
 
-    print("\n=== Predict ===")
-    r = post("/api/predict", {"text": "I want to learn", "top_k": 5})
-    print(json.dumps(r, indent=2)[:600])
+def test_predict():
+    res = predict_endpoint(PredictInput(
+        text="Please send the",
+        top_k=5
+    ))
+    assert res["model"] == "Trigram Model"
+    words = [p["word"] for p in res["predictions"]]
+    assert "report" in words or "document" in words or "presentation" in words or "file" in words
+    print(f"[PASS] Smart Completion Predictor OK (Top suggestions: {words})")
 
-    print("\n=== Statistics ===")
-    r = post("/api/statistics", {"text": "AI is amazing. Machine learning works well. Deep learning is great."})
-    print(json.dumps(r, indent=2)[:500])
 
-    print("\n✓ All endpoints working!")
+def test_statistics():
+    res = statistics_endpoint(TextInput(
+        text="Rahul will finish the project. The project is critical for the college submission."
+    ))
+    assert res["word_count"] > 0
+    assert res["sentence_count"] == 2
+    print(f"[PASS] Text Insights OK (Words: {res['word_count']}, Sentences: {res['sentence_count']})")
 
 
 if __name__ == "__main__":
-    main()
+    print("Testing TaskLens Backend Endpoints...")
+    test_health()
+    test_task_extractor()
+    test_word_meaning()
+    test_predict()
+    test_statistics()
+    print("\nAll TaskLens backend tests passed successfully!")

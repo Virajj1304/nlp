@@ -1,142 +1,177 @@
-# NLP Studio
+# TaskLens
 
-**Interactive Natural Language Processing Toolkit**
-
-A college mini-project that demonstrates classical NLP concepts through an
-interactive web application. Built with React + Vite (frontend) and
-FastAPI + NLTK (backend).
+> **Productivity Web App Powered by Classical Natural Language Processing**  
+> Converts messy everyday messages, emails, meeting notes, and college/project messages into clear actionable tasks using traditional rule-based & statistical NLP.
 
 ---
 
-## Features
+## 📌 Project Overview
 
-| Tool | NLP Concepts |
-|------|-------------|
-| **Tokenizer & Lemmatizer** | Sentence segmentation, word tokenization, WordNet lemmatization |
-| **Word Meaning Detector** | WordNet, word senses, Lesk algorithm (WSD) |
-| **Grammar Analyzer** | POS tagging, rule-based grammar checks |
-| **Sentence Predictor** | N-gram language model (unigram/bigram/trigram), Laplace smoothing |
-| **Text Statistics** | Word frequency, bigrams, corpus statistics |
+**TaskLens** is an NLP mini-project that demonstrates how classical computational linguistics (tokenization, POS tagging, lemmatization, rule-based information extraction, WordNet Word Sense Disambiguation via the Lesk algorithm, and N-gram statistical language modeling) can solve real-world productivity workflows.
 
-All results are computed in real time — nothing is hardcoded.
+> **Zero LLM Policy**: This project strictly uses **classical NLP** (NLTK + WordNet). There are **no** OpenAI, Gemini, Claude, or third-party generative LLM APIs, and **no** chatbots. All extractions and probabilities are computed deterministically and statistically from local algorithms and corpora.
 
 ---
 
-## Tech Stack
+## 🚀 Core Features
 
-- **Frontend:** React.js, Vite, vanilla CSS
-- **Backend:** Python, FastAPI
-- **NLP:** NLTK, WordNet, Lesk Algorithm
+### 1. Task Extractor (Main Feature)
+Converts unstructured chat messages and notes into structured task cards.
+- **Example Input:**  
+  `"Rahul, finish the backend by Wednesday and check the documentation before Thursday."`
+- **Extracted Fields:**
+  - **Action:** Base action verb (e.g., `Finish`, `Check`)
+  - **Task / Object:** Direct object noun phrase (e.g., `the backend`, `the documentation`)
+  - **Assignee:** Vocative / addressed individual or group (e.g., `Rahul`)
+  - **Deadline:** Temporal prepositional phrase (e.g., `Wednesday`, `Thursday`)
+  - **Priority:** Linguistic urgency classification (`High`, `Normal`, `Low`)
+  - **Context:** Domain categorization (`Tech / Engineering`, `Academic / College`, `Operations / Admin`, etc.)
+- **Classical NLP Pipeline:**
+  - **Sentence Segmentation:** NLTK Punkt segmenter
+  - **Word Tokenization:** Penn Treebank word tokenizer
+  - **POS Tagging:** Averaged Perceptron Tagger (`NNP`, `VB`, `DT`, `NN`, `IN`)
+  - **Lemmatization:** WordNet Lemmatizer (`pos='v'`)
+  - **Information Extraction:** Rule-based grammar chunking and vocative addressing heuristics.
+- **NLP Inspection:** Each task card includes an expandable *"How was this extracted?"* section displaying tokens, POS tags, lemmatization steps, and rule breakdowns.
+
+### 2. Context-Aware Word Meaning
+Disambiguates polysemous words based on sentence context using WordNet and the **Simplified Lesk Algorithm**.
+- **Example Input:** `"I went to the bank to deposit money."` with target `"bank"`
+- **Result:** Identifies `depository_financial_institution.n.01` with definition, synonyms, examples, and Lesk overlap score (`['deposit', 'money']`).
+- **Contrast:** When passed `"The fisherman sat on the river bank..."`, it selects `bank.n.01` (slope beside a body of water).
+- **Shows:** Detected meaning, full definition, WordNet synonyms, overlap keywords, and all alternative ranked senses.
+
+### 3. Smart Sentence & Task Completion
+Suggests candidate next words as the user types task prefixes.
+- **Example Input:** `"Please send the"`
+- **Suggestions:** `report`, `document`, `presentation`, `file`
+- **NLP Model:** Statistical **Trigram Language Model** with **Laplace (Add-One) Smoothing**:
+  $$P(w_3 \mid w_1, w_2) = \frac{\text{Count}(w_1, w_2, w_3) + 1}{\text{Count}(w_1, w_2) + |V|}$$
+  with graceful fallback to **Bigram** and **Unigram** models when context is unseen.
+- **Interactive UI:** Click any suggestion chip to append the word and instantly compute the next candidates.
+
+### 4. Text Insights
+Computes lightweight lexical metrics from raw text:
+- Total word count & sentence count
+- Unique words & Lexical Diversity (Type-Token Ratio)
+- Average word length
+- Top frequent words (frequency bars)
+- Common bigram phrases
 
 ---
 
-## Project Structure
+## 🛠 Tech Stack
+
+- **Frontend:** React 19, Vite, Vanilla CSS (Modern Minimalist Linear/Notion dark aesthetic)
+- **Backend:** Python 3.10+, FastAPI, Uvicorn, Pydantic
+- **NLP Engine:** NLTK (Natural Language Toolkit), Princeton WordNet
+
+---
+
+## 📁 Repository Structure
 
 ```
 nlp/
 ├── backend/
-│   ├── main.py                 # FastAPI app with all endpoints
-│   ├── requirements.txt        # Python dependencies
-│   ├── download_nltk.py        # One-time NLTK data downloader
+│   ├── main.py                     # FastAPI REST API routes
+│   ├── requirements.txt            # Python dependencies (fastapi, uvicorn, nltk, pydantic)
+│   ├── download_nltk.py            # One-time NLTK corpora downloader
+│   ├── test_api.py                 # Automated backend test suite
 │   └── services/
-│       ├── tokenizer.py        # Tokenization & Lemmatization
-│       ├── word_meaning.py     # Word Sense Disambiguation (Lesk)
-│       ├── grammar.py          # POS tagging & grammar rules
-│       ├── predictor.py        # N-Gram language model
-│       └── statistics.py       # Text statistics
+│       ├── task_extractor.py       # Task extraction via POS tags & IE rules
+│       ├── word_meaning.py         # Word Sense Disambiguation (Lesk + WordNet)
+│       ├── predictor.py            # Statistical N-Gram Language Model
+│       └── statistics.py           # Text insights & lexical statistics
 │
 └── frontend/
-    ├── index.html
-    ├── package.json
-    ├── vite.config.js
+    ├── index.html                  # HTML5 entry point with Inter & JetBrains Mono
+    ├── package.json                # React + Vite dependencies
+    ├── vite.config.js              # Vite bundler configuration
     └── src/
-        ├── main.jsx
-        ├── index.css           # Global dark-theme styles
-        ├── api.js              # API client
-        ├── App.jsx             # Root layout with sidebar
+        ├── main.jsx                # React root mount
+        ├── App.jsx                 # Main layout & navigation
+        ├── index.css               # Notion/Linear dark theme stylesheet
+        ├── api.js                  # Frontend API client
         └── tools/
-            ├── Tokenizer.jsx
-            ├── WordMeaning.jsx
-            ├── Grammar.jsx
-            ├── Predictor.jsx
-            └── Statistics.jsx
+            ├── TaskExtractor.jsx   # Task Extractor tool (default view)
+            ├── WordMeaning.jsx     # Word Sense Disambiguation tool
+            ├── SmartCompletion.jsx # Smart autocomplete tool
+            └── TextInsights.jsx    # Text metrics & bigrams tool
 ```
 
 ---
 
-## Setup & Run
+## ⚡ Setup & Run Instructions
 
-### 1. Backend
+### 1. Prerequisites
+- Python 3.10+ installed
+- Node.js 18+ and npm installed
+
+---
+
+### 2. Backend Setup
 
 ```bash
+# Navigate to backend directory
 cd backend
 
-# Install Python dependencies
+# Install dependencies
 pip install -r requirements.txt
 
-# Download NLTK data (run once)
+# Download required NLTK datasets (punkt, averaged_perceptron_tagger, wordnet, stopwords)
 python download_nltk.py
 
-# Start the server
+# Run automated tests to verify NLP services
+python test_api.py
+
+# Start the FastAPI server
 uvicorn main:app --reload --port 8000
 ```
 
-The API will be available at `http://localhost:8000`.
+The backend server will run at `http://localhost:8000`.  
+Interactive Swagger API documentation is available at `http://localhost:8000/docs`.
 
-### 2. Frontend
+---
+
+### 3. Frontend Setup
+
+In a new terminal window:
 
 ```bash
+# Navigate to frontend directory
 cd frontend
 
 # Install dependencies
 npm install
 
-# Start the dev server
+# Start the Vite development server
 npm run dev
 ```
 
-The app will open at `http://localhost:5173`.
+Open `http://localhost:5173` in your browser.
 
 ---
 
-## API Endpoints
+## 📡 API Specification
 
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| POST | `/api/tokenize` | Tokenization & lemmatization |
-| POST | `/api/word-meaning` | Word sense disambiguation |
-| POST | `/api/grammar` | POS tagging & grammar check |
-| POST | `/api/predict` | N-gram next-word prediction |
-| POST | `/api/statistics` | Text statistics |
-| GET  | `/api/health` | Health check |
-
----
-
-## NLP Concepts Covered
-
-### Word-Level Analysis
-- Tokenization (sentence & word)
-- Lemmatization (WordNet Lemmatizer)
-- N-Grams (unigram, bigram, trigram)
-- Corpus & Language Models
-- Frequency distributions
-
-### Syntax Analysis
-- Part-of-Speech (POS) Tagging
-- Basic rule-based grammar checking
-
-### Semantic Analysis
-- WordNet (synsets, definitions, synonyms)
-- Semantic ambiguity
-- Word senses
-- Word Sense Disambiguation
-- Lesk Algorithm
+| Method | Endpoint | Description | Request Body |
+|--------|----------|-------------|--------------|
+| `POST` | `/api/extract-tasks` | Extracts structured task cards from text | `{"text": "Rahul, finish backend..."}` |
+| `POST` | `/api/word-meaning` | Performs Lesk WSD on target word | `{"sentence": "...", "target_word": "..."}` |
+| `POST` | `/api/predict` | Computes statistical N-gram predictions | `{"text": "Please send the", "top_k": 5}` |
+| `POST` | `/api/statistics` | Computes word counts, TTR, and bigrams | `{"text": "..."}` |
+| `GET`  | `/api/health` | Backend status & metadata check | _None_ |
 
 ---
 
-## Notes
+## 🎨 UI Design Philosophy
 
-- This is an educational mini-project, not a production system.
-- The grammar checker uses simple heuristic rules — it is not comprehensive.
-- The sentence predictor uses a small built-in corpus; predictions are limited to the vocabulary in that corpus.
-- No external LLM APIs are used — all processing is done locally with NLTK.
+- **Linear / Notion Minimalist Aesthetic:** Deep charcoal background (`#0c0d0e`), subtle borders (`#202428`), and crisp typography.
+- **No AI Tropes:** Zero chatbots, zero pulsing neon gradients, zero robot illustrations.
+- **Diagnostic Transparency:** NLP metrics and POS tags are accessible inside clean, collapsible diagnostics.
+- **Responsive:** Optimized for desktop and mobile screens.
+
+---
+
+## 📄 License
+MIT License. Created for college NLP mini-project demonstration.

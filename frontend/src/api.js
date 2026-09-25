@@ -1,11 +1,21 @@
+/**
+ * TaskLens — API Client
+ * Connects React frontend directly to FastAPI backend
+ */
+
 const API_BASE = "http://localhost:8000";
 
-async function request(endpoint, body) {
-  const res = await fetch(`${API_BASE}${endpoint}`, {
-    method: "POST",
+async function request(endpoint, body = null, method = "POST") {
+  const options = {
+    method,
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(body),
-  });
+  };
+
+  if (body && method !== "GET") {
+    options.body = JSON.stringify(body);
+  }
+
+  const res = await fetch(`${API_BASE}${endpoint}`, options);
 
   if (!res.ok) {
     const text = await res.text();
@@ -22,9 +32,16 @@ async function request(endpoint, body) {
 }
 
 export const api = {
-  tokenize:     (text)                   => request("/api/tokenize",      { text }),
-  wordMeaning:  (sentence, target_word)  => request("/api/word-meaning",  { sentence, target_word }),
-  grammar:      (text)                   => request("/api/grammar",       { text }),
-  predict:      (text, top_k = 5)        => request("/api/predict",       { text, top_k }),
-  statistics:   (text)                   => request("/api/statistics",     { text }),
+  extractTasks: (text) => request("/api/extract-tasks", { text }),
+  wordMeaning: (sentence, target_word) => request("/api/word-meaning", { sentence, target_word }),
+  predict: (text, top_k = 5) => request("/api/predict", { text, top_k }),
+  statistics: (text) => request("/api/statistics", { text }),
+  checkHealth: async () => {
+    try {
+      const res = await fetch(`${API_BASE}/api/health`);
+      return res.ok;
+    } catch {
+      return false;
+    }
+  },
 };

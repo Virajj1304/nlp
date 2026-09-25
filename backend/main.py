@@ -1,72 +1,80 @@
 """
-NLP Studio — FastAPI Backend
-==============================
-Provides REST API endpoints for each NLP tool.
+TaskLens — FastAPI Backend
+============================
+Clean REST API powered entirely by classical NLP (NLTK + WordNet).
+No external LLMs or third-party generative APIs.
 """
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 
-from services import tokenizer, word_meaning, grammar, statistics
+from services import task_extractor, word_meaning, statistics
 from services.predictor import ngram_model
 
-# ── App ──────────────────────────────────────────────────────────────
+# ── App Definition ───────────────────────────────────────────────────
 
-app = FastAPI(title="NLP Studio API", version="1.0.0")
+app = FastAPI(
+    title="TaskLens API",
+    description="Productivity web app converting unstructured messages to actionable tasks via classical NLP",
+    version="1.0.0",
+)
 
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
+    allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
 
-# ── Request / Response schemas ───────────────────────────────────────
+# ── Request Schemas ──────────────────────────────────────────────────
 
 class TextInput(BaseModel):
-    text: str = Field(..., min_length=1, description="Input text")
+    text: str = Field(..., min_length=1, description="Raw input text")
 
 
 class WordMeaningInput(BaseModel):
-    sentence: str = Field(..., min_length=1)
-    target_word: str = Field(..., min_length=1)
+    sentence: str = Field(..., min_length=1, description="Context sentence")
+    target_word: str = Field(..., min_length=1, description="Target word to disambiguate")
 
 
 class PredictInput(BaseModel):
-    text: str = Field(..., min_length=1)
-    top_k: int = Field(5, ge=1, le=20)
+    text: str = Field(..., min_length=1, description="Prefix text for next-word suggestion")
+    top_k: int = Field(5, ge=1, le=15, description="Number of suggestions to return")
 
 
 # ── Endpoints ────────────────────────────────────────────────────────
 
-@app.post("/api/tokenize")
-def tokenize_endpoint(body: TextInput):
+@app.post("/api/extract-tasks")
+def extract_tasks_endpoint(body: TextInput):
+    """
+    Main feature: Extract structured task cards (action, object, assignee,
+    deadline, priority, domain context) from unstructured text.
+    """
     try:
-        return tokenizer.analyze(body.text)
+        return task_extractor.extract_tasks(body.text)
     except Exception as e:
-        return {"error": str(e)}
+        return {"error": str(e), "tasks": [], "count": 0}
 
 
 @app.post("/api/word-meaning")
 def word_meaning_endpoint(body: WordMeaningInput):
+    """
+    Feature 2: Word Sense Disambiguation using WordNet & Lesk algorithm.
+    """
     try:
         return word_meaning.detect_meaning(body.sentence, body.target_word)
     except Exception as e:
         return {"error": str(e)}
 
 
-@app.post("/api/grammar")
-def grammar_endpoint(body: TextInput):
-    try:
-        return grammar.analyze(body.text)
-    except Exception as e:
-        return {"error": str(e)}
-
-
 @app.post("/api/predict")
 def predict_endpoint(body: PredictInput):
+    """
+    Feature 3: Next-word prediction using statistical Trigram/Bigram/Unigram model.
+    """
     try:
         result = ngram_model.predict(body.text, top_k=body.top_k)
         result["corpus_stats"] = ngram_model.corpus_stats()
@@ -77,6 +85,9 @@ def predict_endpoint(body: PredictInput):
 
 @app.post("/api/statistics")
 def statistics_endpoint(body: TextInput):
+    """
+    Feature 4: Lightweight text insights, metrics, frequencies and bigrams.
+    """
     try:
         return statistics.compute(body.text)
     except Exception as e:
@@ -85,4 +96,9 @@ def statistics_endpoint(body: TextInput):
 
 @app.get("/api/health")
 def health():
-    return {"status": "ok"}
+    return {
+        "status": "ok",
+        "app": "TaskLens",
+        "nlp_engine": "NLTK + WordNet",
+        "version": "1.0.0"
+    }

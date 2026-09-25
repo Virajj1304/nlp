@@ -1,87 +1,105 @@
-import { useState } from "react";
-import Tokenizer from "./tools/Tokenizer";
+import { useState, useEffect } from "react";
+import TaskExtractor from "./tools/TaskExtractor";
 import WordMeaning from "./tools/WordMeaning";
-import Grammar from "./tools/Grammar";
-import Predictor from "./tools/Predictor";
-import Statistics from "./tools/Statistics";
+import SmartCompletion from "./tools/SmartCompletion";
+import TextInsights from "./tools/TextInsights";
+import { api } from "./api";
 
-const TOOLS = [
-  { id: "tokenizer",    label: "Tokenizer & Lemmatizer", icon: "✂" },
-  { id: "word-meaning", label: "Word Meaning",           icon: "🔍" },
-  { id: "grammar",      label: "Grammar Analyzer",       icon: "📝" },
-  { id: "predictor",    label: "Sentence Predictor",     icon: "⚡" },
-  { id: "statistics",   label: "Text Statistics",        icon: "📊" },
+const NAV_ITEMS = [
+  { id: "task-extractor", label: "Task Extractor", shortcut: "1" },
+  { id: "word-meaning", label: "Word Meaning", shortcut: "2" },
+  { id: "smart-completion", label: "Smart Completion", shortcut: "3" },
+  { id: "text-insights", label: "Text Insights", shortcut: "4" },
 ];
 
-const TOOL_COMPONENTS = {
-  tokenizer:       Tokenizer,
-  "word-meaning":  WordMeaning,
-  grammar:         Grammar,
-  predictor:       Predictor,
-  statistics:      Statistics,
+const COMPONENTS = {
+  "task-extractor": TaskExtractor,
+  "word-meaning": WordMeaning,
+  "smart-completion": SmartCompletion,
+  "text-insights": TextInsights,
 };
 
 export default function App() {
-  const [activeTool, setActiveTool] = useState("tokenizer");
-  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [activeTab, setActiveTab] = useState("task-extractor");
+  const [backendOnline, setBackendOnline] = useState(null);
 
-  const ActiveComponent = TOOL_COMPONENTS[activeTool];
+  useEffect(() => {
+    let mounted = true;
+    api.checkHealth().then((isOk) => {
+      if (mounted) setBackendOnline(isOk);
+    });
 
-  function selectTool(id) {
-    setActiveTool(id);
-    setSidebarOpen(false);
-  }
+    const interval = setInterval(() => {
+      api.checkHealth().then((isOk) => {
+        if (mounted) setBackendOnline(isOk);
+      });
+    }, 15000);
+
+    return () => {
+      mounted = false;
+      clearInterval(interval);
+    };
+  }, []);
+
+  const ActiveComponent = COMPONENTS[activeTab] || TaskExtractor;
 
   return (
-    <div className="app-layout">
-      {/* Mobile menu button */}
-      <button
-        className="mobile-menu-btn"
-        onClick={() => setSidebarOpen(!sidebarOpen)}
-        aria-label="Toggle menu"
-      >
-        {sidebarOpen ? "✕" : "☰"}
-      </button>
-
-      {/* Overlay for mobile */}
-      <div
-        className={`sidebar-overlay ${sidebarOpen ? "visible" : ""}`}
-        onClick={() => setSidebarOpen(false)}
-      />
-
-      {/* Sidebar */}
-      <aside className={`sidebar ${sidebarOpen ? "open" : ""}`}>
-        <div className="sidebar-header">
-          <div className="sidebar-logo">
-            NLP <span>Studio</span>
+    <div className="app-container">
+      {/* Top Navigation Bar - Minimal Linear/Notion aesthetic */}
+      <header className="app-header">
+        <div className="header-left">
+          <div className="brand" onClick={() => setActiveTab("task-extractor")}>
+            <span className="brand-logo">⌘</span>
+            <div className="brand-text">
+              <span className="brand-name">TaskLens</span>
+              <span className="brand-tag">Classical NLP</span>
+            </div>
           </div>
-          <div className="sidebar-subtitle">
-            Interactive NLP Toolkit
-          </div>
+
+          <nav className="nav-tabs" aria-label="Main Navigation">
+            {NAV_ITEMS.map((item) => (
+              <button
+                key={item.id}
+                type="button"
+                className={`nav-tab ${activeTab === item.id ? "active" : ""}`}
+                onClick={() => setActiveTab(item.id)}
+              >
+                <span>{item.label}</span>
+                <span className="tab-shortcut">{item.shortcut}</span>
+              </button>
+            ))}
+          </nav>
         </div>
 
-        <nav className="sidebar-nav">
-          {TOOLS.map((tool) => (
-            <button
-              key={tool.id}
-              className={`sidebar-link ${activeTool === tool.id ? "active" : ""}`}
-              onClick={() => selectTool(tool.id)}
-            >
-              <span className="icon">{tool.icon}</span>
-              {tool.label}
-            </button>
-          ))}
-        </nav>
-
-        <div className="sidebar-footer">
-          NLP Studio · College Mini-Project
+        <div className="header-right">
+          <div className="status-indicator" title={backendOnline ? "FastAPI Backend Online" : "Connecting to backend..."}>
+            <span className={`status-dot ${backendOnline ? "online" : backendOnline === false ? "offline" : "checking"}`} />
+            <span className="status-text">
+              {backendOnline ? "FastAPI Connected" : backendOnline === false ? "Backend Offline" : "Connecting..."}
+            </span>
+          </div>
+          <span className="tech-badge">NLTK + WordNet</span>
         </div>
-      </aside>
+      </header>
 
-      {/* Main content */}
-      <main className="main-content">
-        <ActiveComponent key={activeTool} />
+      {/* Main Workspace Area */}
+      <main className="app-main">
+        <div className="app-content-wrapper">
+          <ActiveComponent />
+        </div>
       </main>
+
+      {/* Subtle Minimal Footer */}
+      <footer className="app-footer">
+        <div className="footer-left">
+          <span>TaskLens</span>
+          <span className="footer-sep">·</span>
+          <span>Zero LLMs · Pure Rule-Based & Statistical NLP</span>
+        </div>
+        <div className="footer-right">
+          <span>Sentence Segmentation · POS Tagging · Lemmatization · Lesk WSD · N-Gram LM</span>
+        </div>
+      </footer>
     </div>
   );
 }
